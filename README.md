@@ -23,6 +23,12 @@ It uses [`uv`](https://github.com/astral-sh/uv) to manage PyTorch and other Pyth
 
 * **[`.venv/`](.venv/) folder** - The virtual environment directory created by `uv sync`. It contains the isolated Python environment with all project dependencies installed, keeping them separate from your system Python installation.
 
-### Rust Configurations
+### Rust-related
+
+#### Configs
 
 * **[`.cargo/config.toml`](.cargo/config.toml)** - In this config file, we set proper `LIBTORCH` and `DYLD_LIBRARY_PATH` envars to inform `tch-rs` the right PyTorch static library for linking. Change this file if you are using a different Python interpreter from the `python 3.12` set up by `uv`.
+
+#### `tch-rs` issues
+
+See [FAQs](https://github.com/LaurentMazare/tch-rs?tab=readme-ov-file#faq) of `tch-rs`.

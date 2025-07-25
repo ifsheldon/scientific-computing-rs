@@ -1,0 +1,8 @@
+[package]
+name = "scientific-computing-rs"
+version = "0.1.0"
+edition = "2024"
+authors = ["Feng Liang <feng.liang@alumni.kaust.edu.sa>"]
+
+[dependencies]
+tch = "0.20.0"

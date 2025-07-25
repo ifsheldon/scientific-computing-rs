@@ -32,3 +32,7 @@ It uses [`uv`](https://github.com/astral-sh/uv) to manage PyTorch and other Pyth
 #### `tch-rs` issues
 
 See [FAQs](https://github.com/LaurentMazare/tch-rs?tab=readme-ov-file#faq) of `tch-rs`.
+
+## License
+
+[MIT](LICENSE)

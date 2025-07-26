@@ -6,3 +6,5 @@ authors = ["Feng Liang <feng.liang@alumni.kaust.edu.sa>"]
 
 [dependencies]
 tch = "0.20.0"
+rayon = "1.10.0"
+num_cpus = "1.17.0"

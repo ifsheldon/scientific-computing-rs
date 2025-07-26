@@ -1,5 +1,43 @@
+use tch::{Tensor, Device, Kind};
+use rayon::prelude::*;
+use std::time::Instant;
+
 fn main() {
     println!("Hello, here is a template for scientific computing in Rust with tch-rs");
+    benchmark_parallelism(200, 2000, 20);
+}
+
+fn get_randn_tensors(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> {
+    let tensor_size = tensor_size as i64;
+    (0..num_tensors).map(|_| Tensor::randn([tensor_size, tensor_size], (Kind::Float, Device::Cpu))).collect()
+}
+
+fn benchmark_parallelism(tensor_size: usize, num_tensors: usize, repeat: usize) {
+    let core_num = num_cpus::get();
+    rayon::ThreadPoolBuilder::new().num_threads(core_num).build_global().unwrap();
+    // warmup
+    let results: f64 = get_randn_tensors(tensor_size, core_num).into_par_iter().map(|t| t.sum(Kind::Float).double_value(&[])).sum();
+    assert!(results != 0.0);
+
+    let avg_time_parallel = (0..repeat).map(|_| {
+        let tensors = get_randn_tensors(tensor_size, num_tensors);
+        let now = Instant::now();
+        let sum: f64 = tensors.into_par_iter().map(|t| t.sum(Kind::Float).double_value(&[])).sum();
+        let duration = now.elapsed();
+        assert!(sum != 0.0);
+        duration.as_secs_f64()
+    }).sum::<f64>() / repeat as f64;
+
+    let avg_time_serial = (0..repeat).map(|_| {
+        let tensors = get_randn_tensors(tensor_size, num_tensors);
+        let now = Instant::now();
+        let sum: f64 = tensors.into_iter().map(|t| t.sum(Kind::Float).double_value(&[])).sum();
+        let duration = now.elapsed();
+        assert!(sum != 0.0);
+        duration.as_secs_f64()
+    }).sum::<f64>() / repeat as f64;
+
+    println!("avg_time_parallel: {avg_time_parallel}s, avg_time_serial: {avg_time_serial}s, speedup: {}x", avg_time_serial / avg_time_parallel);
 }
 
 #[cfg(test)]

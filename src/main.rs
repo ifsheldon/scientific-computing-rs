@@ -14,6 +14,7 @@ fn get_randn_tensors(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> {
 
 fn benchmark_parallelism(tensor_size: usize, num_tensors: usize, repeat: usize) {
     let core_num = num_cpus::get();
+    println!("core_num: {core_num}");
     rayon::ThreadPoolBuilder::new().num_threads(core_num).build_global().unwrap();
     // warmup
     let results: f64 = get_randn_tensors(tensor_size, core_num).into_par_iter().map(|t| t.sum(Kind::Float).double_value(&[])).sum();

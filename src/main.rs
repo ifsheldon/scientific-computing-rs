@@ -1,4 +1,5 @@
 use tch::{Tensor, Device, Kind};
+use tch::{set_num_threads, set_num_interop_threads};
 use rayon::prelude::*;
 use std::time::Instant;
 
@@ -14,6 +15,8 @@ fn get_randn_tensors(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> {
 
 fn benchmark_parallelism(tensor_size: usize, num_tensors: usize, repeat: usize) {
     let core_num = num_cpus::get();
+    set_num_threads(core_num as i32);
+    set_num_interop_threads(core_num as i32);
     println!("core_num: {core_num}");
     rayon::ThreadPoolBuilder::new().num_threads(core_num).build_global().unwrap();
     // warmup

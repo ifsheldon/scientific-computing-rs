@@ -2,10 +2,21 @@ use tch::{Tensor, Device, Kind};
 use tch::{set_num_threads, set_num_interop_threads};
 use rayon::prelude::*;
 use std::time::Instant;
+use nalgebra::dmatrix;
+use nalgebra::Complex;
 
 fn main() {
     println!("Hello, here is a template for scientific computing in Rust with tch-rs");
-    benchmark_parallelism(200, 2000, 20);
+    // benchmark_parallelism(200, 2000, 20);
+    let a = dmatrix![Complex::new(1.0, 1.0), Complex::new(2.0, 1.0), Complex::new(3.0, 1.0);
+    Complex::new(4.0, 1.0), Complex::new(5.0, 1.0), Complex::new(6.0, 1.0);
+    Complex::new(7.0, 1.0), Complex::new(8.0, 1.0), Complex::new(9.0, 1.0)];
+    let qr = a.clone().qr();
+    println!("{:?}", qr.q());
+    println!("{:?}", qr.r());
+    let svd = a.svd(true, true);
+    println!("{:?}", svd.u);
+    println!("{:?}", svd.v_t);
 }
 
 fn get_randn_tensors(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> {

@@ -8,4 +8,5 @@ authors = ["Feng Liang <feng.liang@alumni.kaust.edu.sa>"]
 tch = "0.20.0"
 rayon = "1.10.0"
 num_cpus = "1.17.0"
-nalgebra = "0.33.2"
+nalgebra = {version = "0.33.2", features = ["rand"]}
+rand = "0.8.5"

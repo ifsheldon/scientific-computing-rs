@@ -1,11 +1,11 @@
 use burn::backend::NdArray;
 use burn::prelude::{Backend, Tensor as BurnTensor};
 use burn::tensor::Distribution;
-use nalgebra::{DMatrix, Matrix, dmatrix};
+use nalgebra::DMatrix;
 use rayon::prelude::*;
 use std::time::Instant;
-use tch::{Device, Kind, Tensor};
 use tch::{set_num_interop_threads, set_num_threads};
+use tch::{Device, Kind, Tensor};
 
 fn main() {
     println!("Hello, here is a template for scientific computing in Rust with tch-rs");
@@ -14,7 +14,8 @@ fn main() {
     let repeat = 20;
     // benchmark_parallelism_tch(tensor_size, num_tensors, repeat);
     // benchmark_parallelism_nalgebra(tensor_size, num_tensors, repeat);
-    benchmark_parallelism_burn(tensor_size, num_tensors, repeat);
+    // benchmark_parallelism_burn(tensor_size, num_tensors, repeat);
+    benchmark_parallelism_candle(tensor_size, num_tensors, repeat);
     // let a = dmatrix![Complex::new(1.0, 1.0), Complex::new(2.0, 1.0), Complex::new(3.0, 1.0);
     // Complex::new(4.0, 1.0), Complex::new(5.0, 1.0), Complex::new(6.0, 1.0);
     // Complex::new(7.0, 1.0), Complex::new(8.0, 1.0), Complex::new(9.0, 1.0)];
@@ -49,6 +50,59 @@ fn get_randn_tensors_nalgebra(tensor_size: usize, num_tensors: usize) -> Vec<DMa
             DMatrix::from_distribution(tensor_size, tensor_size, &standard_distribution, &mut rng)
         })
         .collect()
+}
+
+fn get_randn_tensors_candle(tensor_size: usize, num_tensors: usize) -> Vec<candle_core::Tensor> {
+    let device = candle_core::Device::Cpu;
+    (0..num_tensors)
+        .map(|_| {
+            candle_core::Tensor::randn(0.0, 1.0, &[tensor_size, tensor_size], &device).unwrap()
+        })
+        .collect()
+}
+
+fn benchmark_parallelism_candle(tensor_size: usize, num_tensors: usize, repeat: usize) {
+    let core_num = num_cpus::get();
+    println!("core_num: {core_num}");
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(core_num)
+        .build_global()
+        .unwrap();
+    // warmup
+    let results: f64 = get_randn_tensors_candle(tensor_size, core_num)
+        .par_iter()
+        .map(|t| t.sum([0, 1]).unwrap().to_scalar::<f64>().unwrap())
+        .sum();
+    assert!(results != 0.0);
+    // use into_par_iter will reduce speedup from 11x to 8x
+    let avg_time_parallel = (0..repeat)
+        .map(|_| {
+            let tensors = get_randn_tensors_candle(tensor_size, num_tensors);
+            let now = Instant::now();
+            let sum: f64 = tensors.par_iter().map(|t| t.sum([0, 1]).unwrap().to_scalar::<f64>().unwrap()).sum();
+            let duration = now.elapsed();
+            assert!(sum != 0.0);
+            duration.as_secs_f64()
+        })
+        .sum::<f64>()
+        / repeat as f64;
+
+    let avg_time_serial = (0..repeat)
+        .map(|_| {
+            let tensors = get_randn_tensors_candle(tensor_size, num_tensors);
+            let now = Instant::now();
+            let sum: f64 = tensors.iter().map(|t| t.sum([0, 1]).unwrap().to_scalar::<f64>().unwrap()).sum();
+            let duration = now.elapsed();
+            assert!(sum != 0.0);
+            duration.as_secs_f64()
+        })
+        .sum::<f64>()
+        / repeat as f64;
+
+    println!(
+        "avg_time_parallel: {avg_time_parallel}s, avg_time_serial: {avg_time_serial}s, speedup: {}x",
+        avg_time_serial / avg_time_parallel
+    );
 }
 
 fn benchmark_parallelism_burn(tensor_size: usize, num_tensors: usize, repeat: usize) {

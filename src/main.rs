@@ -1,4 +1,6 @@
-use nalgebra::Complex;
+use burn::backend::NdArray;
+use burn::prelude::{Backend, Tensor as BurnTensor};
+use burn::tensor::Distribution;
 use nalgebra::{DMatrix, Matrix, dmatrix};
 use rayon::prelude::*;
 use std::time::Instant;
@@ -11,7 +13,8 @@ fn main() {
     let num_tensors = 2000;
     let repeat = 20;
     // benchmark_parallelism_tch(tensor_size, num_tensors, repeat);
-    benchmark_parallelism_nalgebra(tensor_size, num_tensors, repeat);
+    // benchmark_parallelism_nalgebra(tensor_size, num_tensors, repeat);
+    benchmark_parallelism_burn(tensor_size, num_tensors, repeat);
     // let a = dmatrix![Complex::new(1.0, 1.0), Complex::new(2.0, 1.0), Complex::new(3.0, 1.0);
     // Complex::new(4.0, 1.0), Complex::new(5.0, 1.0), Complex::new(6.0, 1.0);
     // Complex::new(7.0, 1.0), Complex::new(8.0, 1.0), Complex::new(9.0, 1.0)];
@@ -21,6 +24,14 @@ fn main() {
     // let svd = a.svd(true, true);
     // println!("{:?}", svd.u);
     // println!("{:?}", svd.v_t);
+}
+
+fn get_randn_tensors_burn(tensor_size: usize, num_tensors: usize) -> Vec<BurnTensor<NdArray, 2>> {
+    let distr = Distribution::Normal(1.0, 0.0);
+    let device = <NdArray<f32, i64, i8> as Backend>::Device::default();
+    (0..num_tensors)
+        .map(|_| BurnTensor::<NdArray, 2>::random([tensor_size, tensor_size], distr, &device))
+        .collect()
 }
 
 fn get_randn_tensors_tch(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> {
@@ -38,6 +49,50 @@ fn get_randn_tensors_nalgebra(tensor_size: usize, num_tensors: usize) -> Vec<DMa
             DMatrix::from_distribution(tensor_size, tensor_size, &standard_distribution, &mut rng)
         })
         .collect()
+}
+
+fn benchmark_parallelism_burn(tensor_size: usize, num_tensors: usize, repeat: usize) {
+    let core_num = num_cpus::get();
+    println!("core_num: {core_num}");
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(core_num)
+        .build_global()
+        .unwrap();
+    // warmup
+    let results: f32 = get_randn_tensors_burn(tensor_size, core_num)
+        .into_par_iter()
+        .map(|t| t.sum().into_scalar())
+        .sum();
+    assert!(results != 0.0);
+    // use into_par_iter will reduce speedup from 11x to 8x
+    let avg_time_parallel = (0..repeat)
+        .map(|_| {
+            let tensors = get_randn_tensors_burn(tensor_size, num_tensors);
+            let now = Instant::now();
+            let sum: f32 = tensors.into_par_iter().map(|t| t.sum().into_scalar()).sum();
+            let duration = now.elapsed();
+            assert!(sum != 0.0);
+            duration.as_secs_f64()
+        })
+        .sum::<f64>()
+        / repeat as f64;
+
+    let avg_time_serial = (0..repeat)
+        .map(|_| {
+            let tensors = get_randn_tensors_burn(tensor_size, num_tensors);
+            let now = Instant::now();
+            let sum: f32 = tensors.into_iter().map(|t| t.sum().into_scalar()).sum();
+            let duration = now.elapsed();
+            assert!(sum != 0.0);
+            duration.as_secs_f64()
+        })
+        .sum::<f64>()
+        / repeat as f64;
+
+    println!(
+        "avg_time_parallel: {avg_time_parallel}s, avg_time_serial: {avg_time_serial}s, speedup: {}x",
+        avg_time_serial / avg_time_parallel
+    );
 }
 
 fn benchmark_parallelism_nalgebra(tensor_size: usize, num_tensors: usize, repeat: usize) {

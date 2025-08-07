@@ -29,6 +29,7 @@ fn main() {
         core_num,
         get_randn_tensors_burn,
         burn_tensor_reduce_fn,
+        "Inter-tensor Parallelism Speedup (Burn):",
     );
 
     // benchmarking candle
@@ -41,6 +42,7 @@ fn main() {
         core_num,
         get_randn_tensors_candle,
         candle_tensor_reduce_fn,
+        "Inter-tensor Parallelism Speedup (Candle):",
     );
 
     // benchmarking nalgebra
@@ -53,6 +55,7 @@ fn main() {
         core_num,
         get_randn_tensors_nalgebra,
         nalgebra_matrix_reduce_fn,
+        "Inter-tensor Parallelism Speedup (Nalgebra):",
     );
 
     // benchmarking tch
@@ -66,6 +69,7 @@ fn main() {
         core_num,
         get_randn_tensors_tch,
         tch_tensor_reduce_fn,
+        "Inter-tensor Parallelism Speedup (Tch):",
     );
 }
 
@@ -76,6 +80,7 @@ fn benchmark_with_into_iter<T: Send, F: Send + std::iter::Sum>(
     core_num: usize,
     get_random_tensors_fn: impl Fn(usize, usize) -> Vec<T>,
     tensor_reduce_fn: impl Fn(T) -> F + Sync + Send + Copy,
+    title: &str,
 ) {
     // warmup
     let _results: F = get_random_tensors_fn(tensor_size, core_num)
@@ -109,7 +114,7 @@ fn benchmark_with_into_iter<T: Send, F: Send + std::iter::Sum>(
         / repeat as f64;
 
     println!(
-        "avg_time_parallel: {avg_time_parallel}s, avg_time_serial: {avg_time_serial}s, speedup: {}x",
+        "{title}\n avg_time_parallel: {avg_time_parallel}s\n avg_time_serial: {avg_time_serial}s\n speedup: {}x",
         avg_time_serial / avg_time_parallel
     );
 }
@@ -121,6 +126,7 @@ fn benchmark_with_iter<T: Send + Sync, F: Send + std::iter::Sum>(
     core_num: usize,
     get_random_tensors_fn: impl Fn(usize, usize) -> Vec<T>,
     tensor_reduce_fn: impl Fn(&T) -> F + Sync + Send + Copy,
+    title: &str,
 ) {
     // warmup
     let _results: F = get_random_tensors_fn(tensor_size, core_num)
@@ -154,7 +160,7 @@ fn benchmark_with_iter<T: Send + Sync, F: Send + std::iter::Sum>(
         / repeat as f64;
 
     println!(
-        "avg_time_parallel: {avg_time_parallel}s, avg_time_serial: {avg_time_serial}s, speedup: {}x",
+        "{title}\n avg_time_parallel: {avg_time_parallel}s\n avg_time_serial: {avg_time_serial}s\n speedup: {}x",
         avg_time_serial / avg_time_parallel
     );
 }
@@ -216,6 +222,8 @@ mod tests {
         v_copy.print();
         let loss = v.pow_tensor_scalar(2).sum(Kind::Float);
         loss.backward();
+        let gradient = v.grad();
+        assert!(gradient.allclose(&(2 * v.copy()), 1e-5, 1e-5, false));
         adam.step();
         adam.zero_grad();
         v.print();

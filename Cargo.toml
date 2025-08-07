@@ -12,3 +12,4 @@ nalgebra = {version = "0.33.2", features = ["rand"]}
 rand = "0.8.5"
 burn = {version = "0.18.0", features = ["ndarray", "std"], default-features = false}
 candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.9.1" }
+clap = { version = "4.5", features = ["derive"] }

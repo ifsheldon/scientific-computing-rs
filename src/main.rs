@@ -1,6 +1,7 @@
 use burn::backend::NdArray;
 use burn::prelude::{Backend, Tensor as BurnTensor};
 use burn::tensor::Distribution;
+use clap::Parser;
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use std::hint::black_box;
@@ -8,19 +9,53 @@ use std::time::Instant;
 use tch::{Device, Kind, Tensor};
 use tch::{set_num_interop_threads, set_num_threads};
 
+#[derive(Parser)]
+#[command(name = "benchmark")]
+#[command(about = "Benchmark scientific computing frameworks in Rust")]
+struct Args {
+    /// Framework to benchmark
+    #[arg(value_enum)]
+    framework: Framework,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum Framework {
+    Tch,
+    Burn,
+    Nalgebra,
+    Candle,
+    All,
+}
+
 fn main() {
-    println!("Hello, here is a template for scientific computing in Rust with tch-rs");
+    let args = Args::parse();
     let core_num = num_cpus::get();
-    println!("core_num: {core_num}");
+    println!("Number of CPU cores: {core_num}");
+
     rayon::ThreadPoolBuilder::new()
         .num_threads(core_num)
         .build_global()
         .unwrap();
+
     let tensor_size = 200;
     let num_tensors = 2000;
     let repeat = 20;
 
-    // benchmarking burn
+    match args.framework {
+        Framework::Tch => benchmark_tch(tensor_size, num_tensors, repeat, core_num),
+        Framework::Burn => benchmark_burn(tensor_size, num_tensors, repeat, core_num),
+        Framework::Nalgebra => benchmark_nalgebra(tensor_size, num_tensors, repeat, core_num),
+        Framework::Candle => benchmark_candle(tensor_size, num_tensors, repeat, core_num),
+        Framework::All => {
+            benchmark_burn(tensor_size, num_tensors, repeat, core_num);
+            benchmark_candle(tensor_size, num_tensors, repeat, core_num);
+            benchmark_nalgebra(tensor_size, num_tensors, repeat, core_num);
+            benchmark_tch(tensor_size, num_tensors, repeat, core_num);
+        }
+    }
+}
+
+fn benchmark_burn(tensor_size: usize, num_tensors: usize, repeat: usize, core_num: usize) {
     let burn_tensor_reduce_fn = |t: BurnTensor<NdArray, 2>| t.sum().into_scalar();
     benchmark_with_into_iter(
         tensor_size,
@@ -31,8 +66,9 @@ fn main() {
         burn_tensor_reduce_fn,
         "Inter-tensor Parallelism Speedup (Burn):",
     );
+}
 
-    // benchmarking candle
+fn benchmark_candle(tensor_size: usize, num_tensors: usize, repeat: usize, core_num: usize) {
     let candle_tensor_reduce_fn =
         |t: &candle_core::Tensor| t.sum([0, 1]).unwrap().to_scalar::<f64>().unwrap();
     benchmark_with_iter(
@@ -44,10 +80,10 @@ fn main() {
         candle_tensor_reduce_fn,
         "Inter-tensor Parallelism Speedup (Candle):",
     );
+}
 
-    // benchmarking nalgebra
+fn benchmark_nalgebra(tensor_size: usize, num_tensors: usize, repeat: usize, core_num: usize) {
     let nalgebra_matrix_reduce_fn = |t: &DMatrix<f32>| t.sum();
-    // use benchmark_with_into_iter will reduce speedup from 11x to 8x
     benchmark_with_iter(
         tensor_size,
         num_tensors,
@@ -57,8 +93,9 @@ fn main() {
         nalgebra_matrix_reduce_fn,
         "Inter-tensor Parallelism Speedup (Nalgebra):",
     );
+}
 
-    // benchmarking tch
+fn benchmark_tch(tensor_size: usize, num_tensors: usize, repeat: usize, core_num: usize) {
     let tch_tensor_reduce_fn = |t: Tensor| t.sum(Kind::Float).double_value(&[]);
     set_num_interop_threads(core_num as i32);
     set_num_threads(core_num as i32);

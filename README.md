@@ -9,8 +9,9 @@ It uses [`uv`](https://github.com/astral-sh/uv) to manage PyTorch and other Pyth
 1. Clone this repo
 2. Run `uv sync`
    * If you haven't, install `uv` according to [README of `uv`](https://github.com/astral-sh/uv?tab=readme-ov-file#installation)
-3. Run benchmarks `cargo run --release -- <framework>` where `<framework>` is one of `[tch, burn, nalgebra, candle, all]`.
+3. Run benchmarks `cargo run --release -- benchmark <framework>` where `<framework>` is one of `[tch, burn, nalgebra, candle, all]`.
    * This will take a couple of minutes to run
+4. Run template code `cargo run --release -- run-template`
 
 ## File Explained
 

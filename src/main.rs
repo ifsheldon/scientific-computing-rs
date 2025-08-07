@@ -1,7 +1,7 @@
 use burn::backend::NdArray;
 use burn::prelude::{Backend, Tensor as BurnTensor};
 use burn::tensor::Distribution;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use std::hint::black_box;
@@ -10,12 +10,23 @@ use tch::{Device, Kind, Tensor};
 use tch::{set_num_interop_threads, set_num_threads};
 
 #[derive(Parser)]
-#[command(name = "benchmark")]
-#[command(about = "Benchmark scientific computing frameworks in Rust")]
+#[command(name = "scientific-computing-rs")]
+#[command(about = "Scientific computing benchmarks and templates in Rust")]
 struct Args {
-    /// Framework to benchmark
-    #[arg(value_enum)]
-    framework: Framework,
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Benchmark scientific computing frameworks
+    Benchmark {
+        /// Framework to benchmark
+        #[arg(value_enum)]
+        framework: Framework,
+    },
+    /// Run template code examples
+    RunTemplate,
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]
@@ -29,6 +40,18 @@ enum Framework {
 
 fn main() {
     let args = Args::parse();
+
+    match args.command {
+        Commands::Benchmark { framework } => {
+            run_benchmark(framework);
+        }
+        Commands::RunTemplate => {
+            run_tch_template_code();
+        }
+    }
+}
+
+fn run_benchmark(framework: Framework) {
     let core_num = num_cpus::get();
     println!("Number of CPU cores: {core_num}");
 
@@ -41,7 +64,7 @@ fn main() {
     let num_tensors = 2000;
     let repeat = 20;
 
-    match args.framework {
+    match framework {
         Framework::Tch => benchmark_tch(tensor_size, num_tensors, repeat, core_num),
         Framework::Burn => benchmark_burn(tensor_size, num_tensors, repeat, core_num),
         Framework::Nalgebra => benchmark_nalgebra(tensor_size, num_tensors, repeat, core_num),
@@ -236,21 +259,24 @@ fn get_randn_tensors_candle(tensor_size: usize, num_tensors: usize) -> Vec<candl
         .collect()
 }
 
-#[cfg(test)]
-mod tests {
+fn run_tch_template_code() {
+    use template_code::*;
+    it_works();
+    test_optimizer();
+}
+
+mod template_code {
     use tch::nn::{Adam, OptimizerConfig, VarStore};
     use tch::{Device, Kind, Tensor};
 
-    #[test]
-    fn it_works() {
+    pub fn it_works() {
         let a = Tensor::ones([2, 2], (Kind::Float, Device::Cpu));
         let b = a * 2. * 2.;
         let result = b.sum(Kind::Float).double_value(&[]);
         assert_eq!(result, 2. * 2. * (2. * 2.));
     }
 
-    #[test]
-    fn test_optimizer() {
+    pub fn test_optimizer() {
         let vs = VarStore::new(Device::Cpu);
         let root = vs.root();
         let mut adam = Adam::default().build(&vs, 1e-1).unwrap();

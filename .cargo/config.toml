@@ -1,3 +1,8 @@
 [env]
 LIBTORCH = { value = ".venv/lib/python3.12/site-packages/torch" , relative = true }
-DYLD_LIBRARY_PATH  = { value = ".venv/lib/python3.12/site-packages/torch/lib" , relative = true }
+# DYLD_LIBRARY_PATH  = { value = ".venv/lib/python3.12/site-packages/torch/lib" , relative = true }
+LD_LIBRARY_PATH  = { value = ".venv/lib/python3.12/site-packages/torch/lib" , relative = true, force = true }
+
+[target.'cfg(target_os = "linux")']
+# This bakes the search path into the binary, so it works regardless of the environment.
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN/../../.venv/lib/python3.12/site-packages/torch/lib"]

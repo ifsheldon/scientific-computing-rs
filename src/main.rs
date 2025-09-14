@@ -241,8 +241,8 @@ fn get_randn_tensors_tch(tensor_size: usize, num_tensors: usize) -> Vec<Tensor> 
 }
 
 fn get_randn_tensors_nalgebra(tensor_size: usize, num_tensors: usize) -> Vec<DMatrix<f32>> {
-    let standard_distribution = rand::distributions::Standard;
-    let mut rng = rand::thread_rng();
+    let standard_distribution = rand_distr::Normal::new(0.0, 1.0).unwrap();
+    let mut rng = rand::rng();
     (0..num_tensors)
         .map(|_| {
             DMatrix::from_distribution(tensor_size, tensor_size, &standard_distribution, &mut rng)

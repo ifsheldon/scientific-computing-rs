@@ -1,6 +1,6 @@
 [project]
 name = "scientific-computing-rs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Project template for scientific computing in Rust with PyTorch"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,8 +12,8 @@ dev = [
     # "rust-just>=1.40.0", # recommended for running custom commands
 ]
 
-# tch-rs 0.20.x requires torch == 2.7.0 to be installed
-torch = ["torch==2.7.0"]
+# tch-rs 0.21.x requires torch == 2.8.0 to be installed
+torch = ["torch==2.8.0"]
 
 [tool.uv.sources]
 # Select the appropriate torch version based on the platform

@@ -19,7 +19,7 @@ torch = ["torch==2.8.0"]
 # Select the appropriate torch version based on the platform
 torch = [
     { index = "torch-cpu", marker = "platform_system == 'Darwin'" },
-    { index = "torch-gpu", marker = "platform_system == 'Linux'" },
+    { index = "torch-cpu", marker = "platform_system == 'Linux'" },
 ]
 
 [[tool.uv.index]]
